@@ -5,15 +5,17 @@ import os
 class SimplePDFProcessor:
     """Simplified PDF processor that only adds invoice number and date overlay"""
     
-    def process_invoice(self, input_pdf_path, invoice_number, invoice_date, output_pdf_path):
+    def process_invoice(self, input_pdf_path, invoice_number, invoice_date, output_pdf_path, customer_abn='', exclude_discount=True):
         """
-        Add invoice number and date to the header table fields
+        Add invoice number, date, and customer ABN to the header table fields
         
         Args:
             input_pdf_path: Path to input PDF
             invoice_number: Invoice number to add
             invoice_date: Invoice date to add (YYYY-MM-DD format)
             output_pdf_path: Path to save processed PDF
+            customer_abn: Customer ABN (optional)
+            exclude_discount: Whether to hide discount line on page 2 (default: True)
         """
         try:
             # Open the PDF
@@ -35,6 +37,13 @@ class SimplePDFProcessor:
                 # Footer is at the very bottom, approximately last 30 pixels
                 footer_rect = fitz.Rect(0, page.rect.height - 30, page.rect.width, page.rect.height)
                 page.draw_rect(footer_rect, color=(1, 1, 1), fill=(1, 1, 1))
+                
+                # On page 2 (index 1), hide Amount Paid line if requested
+                if page_num == 1 and exclude_discount:
+                    # Cover the Total Paid (AUD) line with white rectangle
+                    # Final position: X: 403-568, Y: 325-335
+                    discount_rect = fitz.Rect(403, 325, 568, 335)
+                    page.draw_rect(discount_rect, color=(1, 1, 1), fill=(1, 1, 1))
             
             # Now process first page for invoice details
             page = doc[0]
@@ -50,12 +59,16 @@ class SimplePDFProcessor:
             # ADJUSTABLE POSITIONS - modify these values to fine-tune placement
             
             # Invoice Number position
-            invoice_num_x = 450  # X position for invoice number
+            invoice_num_x = 300  # X position for invoice number
             invoice_num_y = 104  # Y position for invoice number (moved up from 114)
             
             # Invoice Date position  
-            invoice_date_x = 505  # X position for invoice date
+            invoice_date_x = 372  # X position for invoice date
             invoice_date_y = 104  # Y position for invoice date (moved up from 114)
+            
+            # Customer ABN position (to the right of invoice date)
+            customer_abn_x = 445  # X position for ABN
+            customer_abn_y = 104  # Y position (same as invoice date)
             
             # Header label positions (above the numbers)
             header_offset_y = 10  # How far above the numbers to place headers
@@ -102,6 +115,23 @@ class SimplePDFProcessor:
                 fontname="Helvetica",
                 color=(0, 0, 0)
             )
+            
+            # Add Customer ABN if provided
+            if customer_abn:
+                page.insert_text(
+                    (customer_abn_x, customer_abn_y - header_offset_y),
+                    "Customer ABN",
+                    fontsize=9,
+                    fontname="Helvetica-Bold",
+                    color=(0, 0, 0)
+                )
+                page.insert_text(
+                    (customer_abn_x, customer_abn_y),
+                    customer_abn,
+                    fontsize=9,
+                    fontname="Helvetica",
+                    color=(0, 0, 0)
+                )
             
             # Save the modified PDF
             page_count = len(doc)

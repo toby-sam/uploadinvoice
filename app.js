@@ -14,6 +14,7 @@ const fileSize = document.getElementById('file-size');
 const removeFileBtn = document.getElementById('remove-file');
 const invoiceNumberInput = document.getElementById('invoice-number');
 const invoiceDateInput = document.getElementById('invoice-date');
+const customerABNInput = document.getElementById('customer-abn');
 const processBtn = document.getElementById('process-btn');
 const downloadBtn = document.getElementById('download-btn');
 const statusMessage = document.getElementById('status-message');
@@ -25,6 +26,7 @@ const spinner = document.getElementById('spinner');
 const nextInvoiceNumberDisplay = document.getElementById('next-invoice-number');
 const processedCountDisplay = document.getElementById('processed-count');
 const autoExtractToggle = document.getElementById('auto-extract-toggle');
+const excludeDiscountToggle = document.getElementById('exclude-discount-toggle');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,7 +88,7 @@ function setupEventListeners() {
 function handleAutoExtractToggle() {
     const isEnabled = autoExtractToggle.checked;
 
-    // Disable/enable manual inputs
+    // Disable/enable manual inputs (ABN is always editable)
     invoiceNumberInput.disabled = isEnabled;
     invoiceDateInput.disabled = isEnabled;
 
@@ -245,9 +247,11 @@ async function processInvoice() {
 
     const invoiceNumber = invoiceNumberInput.value.trim();
     const invoiceDate = invoiceDateInput.value;
+    const customerABN = customerABNInput.value.trim();
+    const excludeDiscount = excludeDiscountToggle.checked;
 
     if (!invoiceNumber || !invoiceDate) {
-        showStatus('error', 'Please fill in all fields');
+        showStatus('error', 'Please fill in all required fields');
         return;
     }
 
@@ -263,6 +267,8 @@ async function processInvoice() {
         formData.append('file', uploadedFile);
         formData.append('invoiceNumber', invoiceNumber);
         formData.append('invoiceDate', invoiceDate);
+        formData.append('customerABN', customerABN);
+        formData.append('excludeDiscount', excludeDiscount);
 
         const response = await fetch(`${API_BASE_URL}/process-invoice`, {
             method: 'POST',

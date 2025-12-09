@@ -140,6 +140,8 @@ def api_process_invoice():
         file = request.files['file']
         invoice_number = request.form.get('invoiceNumber')
         invoice_date = request.form.get('invoiceDate')
+        customer_abn = request.form.get('customerABN', '')  # Optional field
+        exclude_discount = request.form.get('excludeDiscount', 'true') == 'true'  # Default to true
         
         if not invoice_number or not invoice_date:
             return jsonify({'success': False, 'message': 'Missing invoice details'}), 400
@@ -166,7 +168,9 @@ def api_process_invoice():
             input_path,
             invoice_number,
             invoice_date,
-            output_path
+            output_path,
+            customer_abn,
+            exclude_discount
         )
         
         if success:
