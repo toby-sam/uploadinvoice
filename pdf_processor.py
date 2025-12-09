@@ -77,6 +77,20 @@ class SimplePDFProcessor:
             black_rect = fitz.Rect(250, 70, 380, 95)
             page.draw_rect(black_rect, color=(1, 1, 1), fill=(1, 1, 1))
             
+            # Change "Customer:" to "Invoice To:"
+            # Cover the existing "Customer:" label with white rectangle
+            customer_label_rect = fitz.Rect(14, 113, 80, 128)
+            page.draw_rect(customer_label_rect, color=(1, 1, 1), fill=(1, 1, 1))
+            
+            # Add "Invoice To:" label in the same position
+            page.insert_text(
+                (14, 126),
+                "Invoice To:",
+                fontsize=10,
+                fontname="Helvetica-Bold",
+                color=(0, 0, 0)  # Black text on white background
+            )
+            
             print(f"Invoice Number position: x={invoice_num_x}, y={invoice_num_y}")
             print(f"Invoice Date position: x={invoice_date_x}, y={invoice_date_y}")
             
