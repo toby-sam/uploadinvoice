@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Professional invoice PDF processing system with automatic numbering and date management">
+  <title>Invoice PDF Processor - Professional Invoice Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Invoice PDF Processor</h1>
+      <p class="subtitle">Upload, customize, and generate professional invoices</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="next-invoice-number">380812351</div>
+        <div class="stat-label">Next Invoice Number</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="processed-count">0</div>
+        <div class="stat-label">Processed Today</div>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <!-- Upload Section -->
+      <section class="card upload-section">
+        <h2 class="card-title">Upload Invoice</h2>
+
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon">📄</div>
+          <div class="dropzone-text">Drag & drop your PDF here</div>
+          <div class="dropzone-subtext">or click to browse</div>
+          <input type="file" id="file-input" class="file-input" accept=".pdf">
+        </div>
+
+        <div class="file-info" id="file-info">
+          <div class="file-icon">📎</div>
+          <div class="file-details">
+            <div class="file-name" id="file-name">filename.pdf</div>
+            <div class="file-size" id="file-size">0 KB</div>
+          </div>
+          <button class="remove-file" id="remove-file" title="Remove file">×</button>
+        </div>
+
+        <div class="status-message" id="status-message">
+          <span id="status-icon">ℹ️</span>
+          <span id="status-text">Ready to upload</span>
+        </div>
+      </section>
+
+      <!-- Invoice Details -->
+      <section class="card">
+        <h2 class="card-title">Invoice Details</h2>
+
+        <!-- Auto-extract toggle -->
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="auto-extract-toggle" class="toggle-checkbox">
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">Auto-extract from filename</span>
+          </label>
+          <div class="help-text" id="extract-help">
+            Enable this to automatically extract invoice number and date from the filename
+            <br>
+            <small>Expected format: WG_Invoice{NUMBER}_{REF}_{DAY}_{MONTH}_{YEAR}_{TIME}.pdf</small>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="invoice-number">Invoice Number</label>
+          <input type="text" id="invoice-number" placeholder="380812351" value="380812351">
+        </div>
+
+        <div class="form-group">
+          <label for="invoice-date">Invoice Date</label>
+          <input type="date" id="invoice-date">
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="process-btn" disabled>
+            <span>🔄</span>
+            <span>Process Invoice</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Preview Section -->
+      <section class="card">
+        <h2 class="card-title">Preview</h2>
+
+        <div class="preview-container">
+          <div class="preview-placeholder" id="preview-placeholder">
+            <div class="preview-placeholder-icon">👁️</div>
+            <div>Upload a PDF to see preview</div>
+          </div>
+          <img id="pdf-preview" alt="PDF Preview">
+          <div class="spinner" id="spinner"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-success" id="download-btn" disabled>
+            <span>⬇️</span>
+            <span>Download Processed PDF</span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
