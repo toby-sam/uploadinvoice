@@ -69,7 +69,7 @@ python server.py
 Create `/var/www/invoice-processor/gunicorn_config.py`:
 
 ```python
-bind = "127.0.0.1:8000"
+bind = "127.0.0.1:8060"
 workers = 4
 worker_class = "sync"
 timeout = 120
@@ -80,6 +80,7 @@ loglevel = "info"
 ```
 
 Create log directory:
+
 ```bash
 sudo mkdir -p /var/log/invoice-processor
 sudo chown $USER:$USER /var/log/invoice-processor
@@ -103,6 +104,7 @@ stdout_logfile=/var/log/invoice-processor/out.log
 ```
 
 Start the service:
+
 ```bash
 sudo supervisorctl reread
 sudo supervisorctl update
@@ -127,7 +129,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Timeouts for large file processing
         proxy_connect_timeout 300;
         proxy_send_timeout 300;
@@ -137,6 +139,7 @@ server {
 ```
 
 Enable the site:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/invoice-processor /etc/nginx/sites-enabled/
 sudo nginx -t  # Test configuration
@@ -202,6 +205,7 @@ sudo chmod 755 uploads processed
 ## Management Commands
 
 ### View Application Logs
+
 ```bash
 # Supervisor logs
 sudo tail -f /var/log/invoice-processor/out.log
@@ -213,16 +217,19 @@ sudo tail -f /var/nginx/error.log
 ```
 
 ### Restart Application
+
 ```bash
 sudo supervisorctl restart invoice-processor
 ```
 
 ### Stop Application
+
 ```bash
 sudo supervisorctl stop invoice-processor
 ```
 
 ### Update Application
+
 ```bash
 cd /var/www/invoice-processor
 git pull  # If using git
@@ -246,6 +253,7 @@ crontab -e
 ```
 
 Create backup directory:
+
 ```bash
 mkdir -p /var/www/invoice-processor/backups
 ```
@@ -255,18 +263,21 @@ mkdir -p /var/www/invoice-processor/backups
 ## Monitoring and Maintenance
 
 ### Check Service Status
+
 ```bash
 sudo supervisorctl status invoice-processor
 sudo systemctl status nginx
 ```
 
 ### Monitor Disk Space
+
 ```bash
 df -h
 du -sh /var/www/invoice-processor/uploads
 ```
 
 ### Clean Old Uploads (Optional)
+
 ```bash
 # Delete uploads older than 30 days
 find /var/www/invoice-processor/uploads -type f -mtime +30 -delete
@@ -279,27 +290,31 @@ find /var/www/invoice-processor/uploads -type f -mtime +30 -delete
 ### 1. Add Basic Authentication (Optional)
 
 Install apache2-utils:
+
 ```bash
 sudo apt install apache2-utils -y
 ```
 
 Create password file:
+
 ```bash
 sudo htpasswd -c /etc/nginx/.htpasswd accounts
 ```
 
 Update nginx config:
+
 ```nginx
 location / {
     auth_basic "Invoice Processor";
     auth_basic_user_file /etc/nginx/.htpasswd;
-    
+
     proxy_pass http://127.0.0.1:8000;
     # ... rest of config
 }
 ```
 
 Restart nginx:
+
 ```bash
 sudo systemctl restart nginx
 ```
@@ -307,17 +322,19 @@ sudo systemctl restart nginx
 ### 2. Restrict Access by IP (Optional)
 
 Add to nginx config:
+
 ```nginx
 location / {
     allow 192.168.1.0/24;  # Your office network
     deny all;
-    
+
     proxy_pass http://127.0.0.1:8000;
     # ... rest of config
 }
 ```
 
 ### 3. Enable Fail2Ban
+
 ```bash
 sudo apt install fail2ban -y
 sudo systemctl enable fail2ban
@@ -329,6 +346,7 @@ sudo systemctl start fail2ban
 ## Troubleshooting
 
 ### Application Won't Start
+
 ```bash
 # Check logs
 sudo tail -f /var/log/invoice-processor/err.log
@@ -343,6 +361,7 @@ python server.py
 ```
 
 ### Can't Access from Browser
+
 ```bash
 # Check nginx status
 sudo systemctl status nginx
@@ -355,6 +374,7 @@ sudo ufw status
 ```
 
 ### File Upload Fails
+
 ```bash
 # Check nginx client_max_body_size
 sudo nano /etc/nginx/sites-available/invoice-processor
@@ -381,13 +401,17 @@ Example: `http://192.168.1.50/` or `https://invoices.yourcompany.com/`
 For high-traffic scenarios:
 
 ### Increase Gunicorn Workers
+
 Edit `gunicorn_config.py`:
+
 ```python
 workers = (2 * CPU_CORES) + 1  # e.g., 9 for 4-core server
 ```
 
 ### Enable Nginx Caching
+
 Add to nginx config:
+
 ```nginx
 proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=1g;
 
@@ -401,15 +425,15 @@ location /static/ {
 
 ## Quick Reference
 
-| Task | Command |
-|------|---------|
-| Start app | `sudo supervisorctl start invoice-processor` |
-| Stop app | `sudo supervisorctl stop invoice-processor` |
-| Restart app | `sudo supervisorctl restart invoice-processor` |
-| View logs | `sudo tail -f /var/log/invoice-processor/out.log` |
-| Check status | `sudo supervisorctl status` |
-| Restart nginx | `sudo systemctl restart nginx` |
-| Update code | `cd /var/www/invoice-processor && git pull && sudo supervisorctl restart invoice-processor` |
+| Task          | Command                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Start app     | `sudo supervisorctl start invoice-processor`                                                |
+| Stop app      | `sudo supervisorctl stop invoice-processor`                                                 |
+| Restart app   | `sudo supervisorctl restart invoice-processor`                                              |
+| View logs     | `sudo tail -f /var/log/invoice-processor/out.log`                                           |
+| Check status  | `sudo supervisorctl status`                                                                 |
+| Restart nginx | `sudo systemctl restart nginx`                                                              |
+| Update code   | `cd /var/www/invoice-processor && git pull && sudo supervisorctl restart invoice-processor` |
 
 ---
 
