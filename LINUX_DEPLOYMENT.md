@@ -88,21 +88,6 @@ sudo chown $USER:$USER /var/log/invoice-processor
 
 ### Step 5: Configure Supervisor (Auto-Start Service)
 
-Create `/etc/supervisor/conf.d/invoice-processor.conf`:
-
-```ini
-[program:invoice-processor]
-directory=/var/www/invoice-processor
-command=/var/www/invoice-processor/venv/bin/gunicorn -c gunicorn_config.py server:app
-user=www-data
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-stderr_logfile=/var/log/invoice-processor/err.log
-stdout_logfile=/var/log/invoice-processor/out.log
-```
-
 Start the service:
 
 ```bash
