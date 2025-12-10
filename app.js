@@ -1,5 +1,6 @@
 // Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use current page's origin so it works from any computer
+const API_BASE_URL = `${window.location.origin}/api`;
 
 // State
 let uploadedFile = null;
