@@ -54,6 +54,11 @@ def index():
     """Serve the main HTML page"""
     return send_file('index.html')
 
+@app.route('/favicon.svg')
+def favicon():
+    """Serve the favicon"""
+    return send_file('favicon.svg', mimetype='image/svg+xml')
+
 @app.route('/<path:path>')
 def serve_static(path):
     """Serve static files"""
