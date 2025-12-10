@@ -43,19 +43,20 @@ function initializeDatePicker() {
     invoiceDateInput.value = today;
 }
 
-// Fetch next invoice number from server
+// Fetch next invoice number from server (optional - for display only)
 async function fetchNextInvoiceNumber() {
     try {
         const response = await fetch(`${API_BASE_URL}/next-invoice-number`);
         const data = await response.json();
 
         if (data.success) {
-            invoiceNumberInput.value = data.invoiceNumber;
+            // Just update display, don't set input value
             nextInvoiceNumberDisplay.textContent = data.invoiceNumber;
         }
     } catch (error) {
         console.error('Error fetching invoice number:', error);
-        showStatus('error', 'Failed to fetch invoice number. Using default.');
+        // Not critical, just hide the display
+        nextInvoiceNumberDisplay.textContent = '-';
     }
 }
 
@@ -135,7 +136,7 @@ function handleFileSelect(e) {
 }
 
 // Handle file
-function handleFile(file) {
+async function handleFile(file) {
     if (file.type !== 'application/pdf') {
         showStatus('error', 'Please upload a PDF file');
         return;
@@ -154,12 +155,51 @@ function handleFile(file) {
     // Show preview
     showPDFPreview(file);
 
-    // If auto-extract is enabled, parse filename
-    if (autoExtractToggle.checked) {
-        extractFromFilename(file.name);
-    }
+    // Extract reference from PDF
+    await extractReferenceFromPDF(file);
 
     showStatus('success', 'File uploaded successfully');
+}
+
+// Extract reference from PDF
+async function extractReferenceFromPDF(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_BASE_URL}/extract-reference`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            invoiceNumberInput.value = data.reference;
+            const sourceText = data.source === 'pdf' ? 'from PDF' : 'from filename';
+            showStatus('success', `Extracted reference ${sourceText}: ${data.reference}`);
+            
+            // If auto-extract is enabled, also extract date
+            if (autoExtractToggle.checked) {
+                extractFromFilename(file.name);
+            }
+        } else {
+            // Extraction failed - try filename fallback
+            console.log('PDF extraction failed, trying filename...');
+            if (autoExtractToggle.checked) {
+                extractFromFilename(file.name);
+            } else {
+                // Show warning that manual input is required
+                showStatus('error', 'Could not extract reference. Please enter Invoice No manually.');
+                invoiceNumberInput.value = '';
+                invoiceNumberInput.focus();
+            }
+        }
+    } catch (error) {
+        console.error('Error extracting reference:', error);
+        showStatus('error', 'Could not extract reference. Please enter Invoice No manually.');
+        invoiceNumberInput.value = '';
+    }
 }
 
 // Extract invoice details from filename
@@ -176,20 +216,34 @@ async function extractFromFilename(filename) {
         const data = await response.json();
 
         if (data.success) {
-            invoiceNumberInput.value = data.invoice_number;
-            invoiceDateInput.value = data.invoice_date;
-            showStatus('success', `Extracted: Invoice #${data.invoice_number}, Date: ${data.invoice_date}`);
+            // Set invoice number if extracted from filename
+            if (data.invoice_number) {
+                invoiceNumberInput.value = data.invoice_number;
+            }
+            // Set date
+            if (data.invoice_date) {
+                invoiceDateInput.value = data.invoice_date;
+            }
+            
+            const parts = [];
+            if (data.invoice_number) parts.push(`Invoice #${data.invoice_number}`);
+            if (data.invoice_date) parts.push(`Date: ${data.invoice_date}`);
+            
+            if (parts.length > 0) {
+                showStatus('success', `Extracted: ${parts.join(', ')}`);
+            }
         } else {
-            showStatus('error', `Failed to extract: ${data.error}`);
-            // Disable auto-extract on failure
-            autoExtractToggle.checked = false;
-            handleAutoExtractToggle();
+            // Filename parsing failed - not critical if we already have reference from PDF
+            if (!invoiceNumberInput.value) {
+                showStatus('error', 'Could not extract reference. Please enter Invoice No manually.');
+                invoiceNumberInput.focus();
+            }
         }
     } catch (error) {
         console.error('Error extracting from filename:', error);
-        showStatus('error', 'Failed to parse filename');
-        autoExtractToggle.checked = false;
-        handleAutoExtractToggle();
+        if (!invoiceNumberInput.value) {
+            showStatus('error', 'Could not extract reference. Please enter Invoice No manually.');
+        }
     }
 }
 
@@ -320,23 +374,18 @@ async function downloadProcessedPDF() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/download/${processedFilename}`);
+        // Use direct link instead of blob to preserve filename
+        const downloadUrl = `${API_BASE_URL}/download/${processedFilename}`;
+        
+        // Create temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = processedFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-        if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = processedFilename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showStatus('success', 'Download started!');
-        } else {
-            throw new Error('Download failed');
-        }
+        showStatus('success', 'Download started!');
     } catch (error) {
         console.error('Error downloading file:', error);
         showStatus('error', 'Download failed');

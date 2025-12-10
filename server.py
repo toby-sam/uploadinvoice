@@ -6,6 +6,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 import config
 from pdf_processor import SimplePDFProcessor
+from pdf_text_extractor import PDFTextExtractor
 
 app = Flask(__name__)
 CORS(app)
@@ -15,8 +16,9 @@ os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(config.OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(config.TEMP_FOLDER, exist_ok=True)
 
-# Initialize PDF processor
+# Initialize PDF processor and text extractor
 pdf_processor = SimplePDFProcessor()
+text_extractor = PDFTextExtractor()
 
 def get_invoice_tracker():
     """Load invoice tracker from JSON file"""
@@ -81,7 +83,7 @@ def api_next_invoice_number():
 
 @app.route('/api/parse-filename', methods=['POST'])
 def api_parse_filename():
-    """Parse invoice number and date from filename"""
+    """Parse invoice reference and date from filename"""
     try:
         from filename_parser import parse_invoice_from_filename
         
@@ -94,7 +96,14 @@ def api_parse_filename():
                 'error': 'No filename provided'
             }), 400
         
+        # Parse date from filename
         result = parse_invoice_from_filename(filename)
+        
+        # Also try to extract reference from filename
+        ref_result = text_extractor.extract_reference_from_filename(filename)
+        if ref_result['success']:
+            result['invoice_number'] = ref_result['reference']
+        
         return jsonify(result)
         
     except Exception as e:
@@ -102,6 +111,49 @@ def api_parse_filename():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/extract-reference', methods=['POST'])
+def api_extract_reference():
+    """Extract reference number from uploaded PDF"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        if not file.filename.endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'File must be a PDF'}), 400
+        
+        # Save uploaded file temporarily
+        filename = secure_filename(file.filename)
+        temp_pdf_path = os.path.join(config.TEMP_FOLDER, f'extract_{filename}')
+        file.save(temp_pdf_path)
+        
+        # Extract reference from PDF and filename
+        result = text_extractor.extract_reference(temp_pdf_path, filename)
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_pdf_path)
+        except:
+            pass
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'reference': result['reference'],
+                'source': result['source']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/preview', methods=['POST'])
 def api_preview():
@@ -164,8 +216,10 @@ def api_process_invoice():
         input_path = os.path.join(config.UPLOAD_FOLDER, input_filename)
         file.save(input_path)
         
-        # Generate output filename
-        output_filename = f'invoice_{invoice_number}_{timestamp}.pdf'
+        # Generate output filename - clean format: WG_Invoice_REFERENCE.pdf
+        # Sanitize invoice_number to be filename-safe
+        safe_invoice_number = invoice_number.replace('/', '-').replace('\\', '-').replace(' ', '_')
+        output_filename = f'WG_Invoice_{safe_invoice_number}.pdf'
         output_path = os.path.join(config.OUTPUT_FOLDER, output_filename)
         
         # Process the PDF
@@ -230,7 +284,8 @@ def api_download(filename):
             config.OUTPUT_FOLDER,
             filename,
             as_attachment=True,
-            download_name=filename
+            download_name=filename,
+            mimetype='application/pdf'
         )
     except Exception as e:
         return jsonify({
